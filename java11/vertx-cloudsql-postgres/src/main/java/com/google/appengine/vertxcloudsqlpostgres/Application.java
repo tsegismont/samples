@@ -15,14 +15,15 @@
  */
 package com.google.appengine.vertxcloudsqlpostgres;
 
-import io.reactiverse.pgclient.PgClient;
-import io.reactiverse.pgclient.PgPoolOptions;
-import io.reactiverse.pgclient.PgRowSet;
-import io.reactiverse.pgclient.Row;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.pgclient.PgConnectOptions;
+import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.PoolOptions;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 
 public class Application extends AbstractVerticle {
 
@@ -33,19 +34,19 @@ public class Application extends AbstractVerticle {
   private static final String DB_UNIX_DOMAIN_SOCKET = "/cloudsql/" + CLOUD_SQL_INSTANCE_NAME;
   private static final int DB_PORT = 5432;
 
-  private PgClient pgClient;
+  private PgPool pgClient;
 
   @Override
   public void start(Future<Void> startFuture) {
 
-    PgPoolOptions options = new PgPoolOptions()
+    PgConnectOptions options = new PgConnectOptions()
         .setUser(DB_USER)
         .setPassword(DB_PASSWORD)
         .setDatabase(DB_NAME)
         .setPort(DB_PORT)
         .setHost(DB_UNIX_DOMAIN_SOCKET);
 
-    pgClient = PgClient.pool(vertx, options);
+    pgClient = PgPool.pool(vertx, options, new PoolOptions());
 
     Router router = Router.router(vertx);
 
@@ -59,7 +60,7 @@ public class Application extends AbstractVerticle {
   private void handleDefault(RoutingContext routingContext) {
     pgClient.query("select * from information_schema.tables", res -> {
       if (res.succeeded()) {
-        PgRowSet rows = res.result();
+        RowSet<Row> rows = res.result();
         StringBuilder result = new StringBuilder("List of all tables in your Cloud SQL:");
         for (Row row : rows) {
           result
